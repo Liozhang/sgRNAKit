@@ -8,6 +8,7 @@ from optparse import OptionParser
 import datetime
 import re
 import os
+from numpy import isin
 from tqdm import tqdm
 from Bio import SeqIO
 from Bio import AlignIO
@@ -266,7 +267,7 @@ def poolGetWaterAlignment(sgrna_list, cdna_path, gapopen=10, gapextend=0.5, thre
     with tqdm(desc='Aligning', total=len(params)) as pbar:
         for param in params:
             result = pool.apply_async(func=getWaterAlignment, args=param, callback=lambda x: pbar.update())
-        results.append(result.get())
+            results.append(result.get())
         pool.close()
         pool.join()
     time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -290,41 +291,41 @@ def getCigarString(alignments, start, end):
     return cigar
 
 
-def getOffTargets(cdna_seq, sgRNA_seq, max_mismatches, min_consecutive_matches, num_processes=None,num_threads=None):
-    off_targets = []
-    if num_processes:
-        with Pool(num_processes) as pool:
-            for sgRNA, cdna in tqdm(itertools.product(sgRNA_seq, cdna_seq), total=len(sgRNA_seq)*len(cdna_seq), desc='sgRNA'):
-                forward_result = pool.apply_async(pairwiseLocalAlign, args=(cdna, sgRNA, max_mismatches, min_consecutive_matches))
-                reverse_result = pool.apply_async(pairwiseLocalAlign, args=(cdna, reverseComplement(sgRNA), max_mismatches, min_consecutive_matches))
-                forward_result = forward_result.get()
-                reverse_result = reverse_result.get()
-                if forward_result:
-                    off_targets.append({'sgRNA': sgRNA.id, 'cdna': cdna.id, 'strand': '+', **forward_result})
-                if reverse_result:
-                    off_targets.append({'sgRNA': sgRNA.id, 'cdna': cdna.id, 'strand': '-', **reverse_result})
-        return pd.DataFrame(off_targets)
-    elif num_threads:
-        with ThreadPoolExecutor(max_workers=num_threads) as executor:
-            for sgRNA, cdna in tqdm(itertools.product(sgRNA_seq, cdna_seq), total=len(sgRNA_seq)*len(cdna_seq), desc='sgRNA'):
-                forward_result = executor.submit(pairwiseLocalAlign, cdna, sgRNA, max_mismatches, min_consecutive_matches)
-                reverse_result = executor.submit(pairwiseLocalAlign, cdna, reverseComplement(sgRNA), max_mismatches, min_consecutive_matches)
-                forward_result = forward_result.result()
-                reverse_result = reverse_result.result()
-                if forward_result:
-                    off_targets.append({'sgRNA': sgRNA.id, 'cdna': cdna.id, 'strand': '+', **forward_result})
-                if reverse_result:
-                    off_targets.append({'sgRNA': sgRNA.id, 'cdna': cdna.id, 'strand': '-', **reverse_result})
-        return pd.DataFrame(off_targets)
-    else:
-        for sgRNA, cdna in tqdm(itertools.product(sgRNA_seq, cdna_seq), total=len(sgRNA_seq)*len(cdna_seq), desc='sgRNA'):
-            forward_result = pairwiseLocalAlign(cdna, sgRNA, max_mismatches, min_consecutive_matches)
-            reverse_result = pairwiseLocalAlign(cdna, reverseComplement(sgRNA), max_mismatches, min_consecutive_matches)
-            if forward_result:
-                off_targets.append({'sgRNA': sgRNA.id, 'cdna': cdna.id, 'strand': '+', **forward_result})
-            if reverse_result:
-                off_targets.append({'sgRNA': sgRNA.id, 'cdna': cdna.id, 'strand': '-', **reverse_result})
-        return pd.DataFrame(off_targets)
+# def getOffTargets(cdna_seq, sgRNA_seq, max_mismatches, min_consecutive_matches, num_processes=None,num_threads=None):
+#     off_targets = []
+#     if num_processes:
+#         with Pool(num_processes) as pool:
+#             for sgRNA, cdna in tqdm(itertools.product(sgRNA_seq, cdna_seq), total=len(sgRNA_seq)*len(cdna_seq), desc='sgRNA'):
+#                 forward_result = pool.apply_async(pairwiseLocalAlign, args=(cdna, sgRNA, max_mismatches, min_consecutive_matches))
+#                 reverse_result = pool.apply_async(pairwiseLocalAlign, args=(cdna, reverseComplement(sgRNA), max_mismatches, min_consecutive_matches))
+#                 forward_result = forward_result.get()
+#                 reverse_result = reverse_result.get()
+#                 if forward_result:
+#                     off_targets.append({'sgRNA': sgRNA.id, 'cdna': cdna.id, 'strand': '+', **forward_result})
+#                 if reverse_result:
+#                     off_targets.append({'sgRNA': sgRNA.id, 'cdna': cdna.id, 'strand': '-', **reverse_result})
+#         return pd.DataFrame(off_targets)
+#     elif num_threads:
+#         with ThreadPoolExecutor(max_workers=num_threads) as executor:
+#             for sgRNA, cdna in tqdm(itertools.product(sgRNA_seq, cdna_seq), total=len(sgRNA_seq)*len(cdna_seq), desc='sgRNA'):
+#                 forward_result = executor.submit(pairwiseLocalAlign, cdna, sgRNA, max_mismatches, min_consecutive_matches)
+#                 reverse_result = executor.submit(pairwiseLocalAlign, cdna, reverseComplement(sgRNA), max_mismatches, min_consecutive_matches)
+#                 forward_result = forward_result.result()
+#                 reverse_result = reverse_result.result()
+#                 if forward_result:
+#                     off_targets.append({'sgRNA': sgRNA.id, 'cdna': cdna.id, 'strand': '+', **forward_result})
+#                 if reverse_result:
+#                     off_targets.append({'sgRNA': sgRNA.id, 'cdna': cdna.id, 'strand': '-', **reverse_result})
+#         return pd.DataFrame(off_targets)
+#     else:
+#         for sgRNA, cdna in tqdm(itertools.product(sgRNA_seq, cdna_seq), total=len(sgRNA_seq)*len(cdna_seq), desc='sgRNA'):
+#             forward_result = pairwiseLocalAlign(cdna, sgRNA, max_mismatches, min_consecutive_matches)
+#             reverse_result = pairwiseLocalAlign(cdna, reverseComplement(sgRNA), max_mismatches, min_consecutive_matches)
+#             if forward_result:
+#                 off_targets.append({'sgRNA': sgRNA.id, 'cdna': cdna.id, 'strand': '+', **forward_result})
+#             if reverse_result:
+#                 off_targets.append({'sgRNA': sgRNA.id, 'cdna': cdna.id, 'strand': '-', **reverse_result})
+#         return pd.DataFrame(off_targets)
     
     
 def pairwiseLocalAlign(seq1, seq2, max_mismatches=None, min_consecutive_matches=None):
