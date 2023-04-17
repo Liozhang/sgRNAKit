@@ -422,13 +422,8 @@ def removeTmpfile(sgrna_list):
                 gzfile.append(gzipout)
                 pbar.update(1) 
                 continue
-            with open(water_out, "rb") as f_in:
-                f_value = f_in.read()
-            f_in.close()
-
-            with gzip.open(gzipout, "wb", 9) as gzip_out:
-                gzip_out.write(memoryview(f_value))
-            gzip_out.close()
+            CMD = f'gzip {water_out} -c > {gzipout}'
+            subprocess.Popen(CMD, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
             try:
                 os.remove(sgrna_fa)
                 os.remove(water_out)
