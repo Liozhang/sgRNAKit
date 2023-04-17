@@ -522,6 +522,7 @@ def annoTranscript(data=None, data_path=None, trans_anno=None, cdna_path=None):
     return data
 
 
+
 def main():
     options = getOptions()
     if options.target:
