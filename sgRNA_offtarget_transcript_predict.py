@@ -267,7 +267,9 @@ def poolGetWaterAlignment(sgrna_list, cdna_path, gapopen=10, gapextend=0.5, thre
     with tqdm(desc='Aligning', total=len(params)) as pbar:
         for param in params:
             result = pool.apply_async(func=getWaterAlignment, args=param, callback=lambda x: pbar.update())
-            results.append(result.get())
+            # results.append(result.get())
+            results.append(result)
+        results = [result.get() for result in results]
         pool.close()
         pool.join()
     time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -395,18 +397,19 @@ def filterWaterResult(water_out_path, sgrna_len, min_match, max_unalign, sgrna_i
 
 def poolFilterWaterResult(sgrna_list, min_match, max_unalign, threads=2):
     pool = Pool(processes=threads)
-    results_list = []
+    results = []
     for record in tqdm(sgrna_list, desc='Filtering result'):
         water_path = record[3]
         sgrna_len = len(record[1])
         sgrna_id = record[0]
         result = pool.apply_async(filterWaterResult, args=(water_path, sgrna_len, min_match, max_unalign, sgrna_id))
-        results_list.append(result.get())
+        results.append(result)
+    results = [result.get() for result in results]
     pool.close()
     pool.join()
     time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    print(f'{time} <RESULT> got {len(results_list)} different sgRNA result')
-    return results_list
+    print(f'{time} <RESULT> got {len(results)} different sgRNA result')
+    return results
 
 
 def removeTmpfile(sgrna_list):
