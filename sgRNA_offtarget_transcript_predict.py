@@ -207,6 +207,9 @@ def splitSgrna(sgrna_path, out_path, strand="both"):
     sgrna_seq = SeqIO.parse(sgrna_path, 'fasta')
     for record in sgrna_seq:
         record.seq = record.seq.upper()
+        # 如果seq里含有U，替换为T
+        if "U" in record.seq:
+            record.seq = record.seq.replace("U", "T")
         sgrna_name = record.id.split(":")[0]
         swater = f'{out_path}_{sgrna_name}.water'
 
@@ -351,7 +354,7 @@ def pairwiseLocalAlign(seq1, seq2, max_mismatches=None, min_consecutive_matches=
     
 def reverseComplement(seq):
     if isinstance(seq, str):
-        seq = seq.translate(str.maketrans("ATCG", "TAGC"))[::-1]
+        seq = seq.translate(str.maketrans("ATCGU", "TAGCA"))[::-1]
     else:
         seq.seq = seq.seq.reverse_complement()
     return seq
