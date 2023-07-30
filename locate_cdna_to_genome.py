@@ -110,8 +110,9 @@ if __name__ == '__main__':
         tx_region.iloc[:, 0] = check_txid(tx_region, options.txid)
         print(f'Load {tx_region.shape[0]} regions from {options.file}')
         locations = get_locations_from_df(tx_region)
+        # 合并
         locations.to_csv(options.output, sep='\t', index=False)
-    if options.txid and options.start and options.end:
+    elif options.txid and options.start and options.end:
         if '.' in options.txid:
             options.txid = options.txid.split('.')[0]
         location = get_location(options.txid, options.start, options.end)
